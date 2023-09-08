@@ -104,6 +104,12 @@ def Euclidean_dist(x_i, x_j):
 
 df_iono = pd.read_csv("ionosphere-dataset/ionosphere.data")
 
+# import cudf
+# Bridge from pandas to cudf
+#gdf = cudf.DataFrame.from_pandas(pandas_df)
+
+# Print dataframe
+# print(gdf)
 
 cols =  [ f'real_{i//2}' if i%2==0 else f'imaginary_{i//2}' for i in range(0,34)] + ['target']
 df_iono.columns = cols
@@ -113,19 +119,11 @@ df_iono.describe()
 #convert dataframe into numpy matrix
 iono_arr = df_iono.iloc[:,:-1].to_numpy()
 
-
-
 #dropping the target  column  (bad/good)
 classes = df_iono["target"].tolist()
-X = df_iono.drop("target", 1)
-
-
-
-
-
+X = df_iono.drop(labels="target", axis=1)
 
 #sys.exit()
-
 
 #PCA with scikit learn
 pca_iono = PCA(n_components=2)
@@ -134,7 +132,6 @@ pca_iono = PCA(n_components=2)
 
 X_standard = StandardScaler().fit_transform(X)
 
-
 principalComponents_iono = pca_iono.fit_transform(X_standard)
 
 pc1_scikit= - principalComponents_iono[:,0]
@@ -142,9 +139,7 @@ pc2_scikit= - principalComponents_iono[:,1]
 plot_scatter(pc1_scikit, pc2_scikit, classes, 'plot_scatter_PC_scikit.pdf')
 print('Explained variation per principal component: {}'.format(pca_iono.explained_variance_ratio_))
 
-
 #PCA with my implementation
-
 
 #Step-1 : data standardization
 
@@ -161,23 +156,16 @@ X_standard_arr[np.isnan(X_standard_arr)] = 0.0
 print('maximum difference found between my standardized dataset and the one standardized with scikit is:')
 print(np.max(X_standard_arr - X_standard))
 
-
 myX_reduced, eigvals, eigvectors = my_PCA(X_standard_arr, 2)
 
 my_pc1= - myX_reduced[:,0]
 my_pc2= myX_reduced[:,1]
 
-
-
 #Scatter plot of datapoints projected in the PC space
 plot_scatter(my_pc1, my_pc2, classes, 'plot_scatter_PC_mine.pdf')
 
-
-
 #Plotting the sorted eigenvalues
 pca_lambda_plot(eigvals)
-
-
 
 # plotting the variance explained by each PC to see how many principal components consider to treat this dataset
 explained_variance=(eigvals / np.sum(eigvals))*100
