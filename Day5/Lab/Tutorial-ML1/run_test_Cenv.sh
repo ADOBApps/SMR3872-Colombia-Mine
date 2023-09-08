@@ -23,4 +23,3 @@ source $HOME/.bashrc
 conda activate /leonardo_work/ICT23_SMR3872/shared-env/MLenv/
 
 python --version
-

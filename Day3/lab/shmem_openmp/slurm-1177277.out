@@ -1,0 +1,19 @@
+Unloading profile/base
+  ERROR: Module evaluation aborted
+Loading openmpi/4.1.4--gcc--11.3.0-cuda-11.8
+  Loading requirement: zlib/1.2.13--gcc--11.3.0
+Running with 32 processes...
+The value of PI is 3.141592654 Vs 3.141592654
+Time to solution 0.460293 (sec.)
+Running with 16 processes...
+The value of PI is 3.141592654 Vs 3.141592654
+Time to solution 0.913579 (sec.)
+Running with 8 processes...
+The value of PI is 3.141592654 Vs 3.141592654
+Time to solution 1.78512 (sec.)
+Running with 4 processes...
+The value of PI is 3.141592654 Vs 3.141592654
+Time to solution 3.56644 (sec.)
+Running with 2 processes...
+The value of PI is 3.141592654 Vs 3.141592654
+Time to solution 7.13007 (sec.)

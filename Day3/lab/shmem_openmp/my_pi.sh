@@ -12,4 +12,15 @@
 module purge
 module load openmpi/4.1.4--gcc--11.3.0-cuda-11.8
 
-./a.out
+gcc -o my_pi.x my_pi.c -fopenmp
+
+./my_pi.x
+
+export OMP_NUM_THREADS=16
+./my_pi.x
+export OMP_NUM_THREADS=8
+./my_pi.x
+export OMP_NUM_THREADS=4
+./my_pi.x
+export OMP_NUM_THREADS=2
+./my_pi.x
