@@ -33,8 +33,7 @@ typedef struct _mdsys mdsys_t;
 
 /* helper function: read a line and then return
    the first string with whitespace stripped off */
-static int get_a_line(FILE *fp, char *buf)
-{
+static int get_a_line(FILE *fp, char *buf){
     char tmp[BLEN], *ptr;
 
     /* read a line and cut of comments and blanks */
@@ -62,16 +61,14 @@ static int get_a_line(FILE *fp, char *buf)
 
 /* helper function: get current time in seconds since epoch */
 
-static double wallclock()
-{
+static double wallclock(){
         struct timeval t;
         gettimeofday(&t,0);
         return ((double) t.tv_sec) + 1.0e-6*((double) t.tv_usec);
 }
 
 /* helper function: zero out an array */
-static void azzero(double *d, const int n)
-{
+static void azzero(double *d, const int n){
     int i;
     for (i=0; i<n; ++i) {
         d[i]=0.0;
@@ -79,16 +76,14 @@ static void azzero(double *d, const int n)
 }
 
 /* helper function: apply minimum image convention */
-static double pbc(double x, const double boxby2)
-{
+static double pbc(double x, const double boxby2){
     while (x >  boxby2) x -= 2.0*boxby2;
     while (x < -boxby2) x += 2.0*boxby2;
     return x;
 }
 
 /* compute kinetic energy */
-static void ekin(mdsys_t *sys)
-{
+static void ekin(mdsys_t *sys){
     int i;
 
     sys->ekin=0.0;
@@ -142,8 +137,7 @@ static void force(mdsys_t *sys){
 }
 
 /* velocity verlet */
-static void velverlet(mdsys_t *sys)
-{
+static void velverlet(mdsys_t *sys){
     int i;
 
     /* first part: propagate velocities by half and positions by full step */
@@ -168,8 +162,7 @@ static void velverlet(mdsys_t *sys)
 }
 
 /* append data to output. */
-static void output(mdsys_t *sys, FILE *erg, FILE *traj)
-{
+static void output(mdsys_t *sys, FILE *erg, FILE *traj){
     int i;
 
     printf("% 8d % 20.8f % 20.8f % 20.8f % 20.8f\n", sys->nfi, sys->temp, sys->ekin, sys->epot, sys->ekin+sys->epot);
@@ -182,8 +175,7 @@ static void output(mdsys_t *sys, FILE *erg, FILE *traj)
 
 
 /* main */
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
     int nprint, i;
     char restfile[BLEN], trajfile[BLEN], ergfile[BLEN], line[BLEN];
     FILE *fp,*traj,*erg;

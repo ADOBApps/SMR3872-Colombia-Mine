@@ -10,4 +10,4 @@ find_package(MPI REQUIRED)
 
 # add the MPI executable
 add_executable(mpi_bcast mpi_bcast.c)
-target_link_libraries(mpi_bcast PUBLIC MPI::MPI_C)
+target_link_libraries(mpi_bcast PRIVATE MPI::MPI_C)

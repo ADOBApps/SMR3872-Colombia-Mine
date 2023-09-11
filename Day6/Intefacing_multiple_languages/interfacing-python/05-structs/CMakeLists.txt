@@ -11,5 +11,11 @@ if(BUILD_SHARED_LIBS)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
+CFLAGS=-shared -fPIC -Wall -O
+
+# SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
+# set(CMAKE_C_FLAGS "${CFLAGS}")
+
+
 # add the executable
 add_executable(data_cmake.so data.c)
