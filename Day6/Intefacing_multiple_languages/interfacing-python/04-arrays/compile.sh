@@ -1,0 +1,1 @@
+gcc -shared -o sum.so -fPIC -Wall -O sum.c;

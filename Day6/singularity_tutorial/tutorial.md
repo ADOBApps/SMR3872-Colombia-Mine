@@ -9,7 +9,7 @@ module load singularity
 ### 2. Execute a simple command with one singularity image.
 
 ```
-$ singularity exec library://ubuntu:23.04 cat /etc/os-release
+$ singularity exec library://ubuntu:22.04 cat /etc/os-release
 ```
 ```
 INFO:    Downloading library image

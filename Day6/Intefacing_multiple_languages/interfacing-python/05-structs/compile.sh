@@ -1,0 +1,1 @@
+gcc -shared -o data.so -fPIC -Wall -O data.c;
