@@ -13,20 +13,20 @@ int main(int argc, char* argv[]){
     MPI_Init(&argc, &argv);
  
     // Get my rank in the communicator
-    int my_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    int my_proc_id;
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_proc_id);
  
     // Determine the rank of the broadcast emitter process
     int broadcast_root = 0;
  
     int buffer;
-    if(my_rank == broadcast_root){
+    if(my_proc_id == broadcast_root){
         buffer = 12345;
-        printf("[MPI process %d] I am the broadcast root, and send value %d.\n", my_rank, buffer);
+        printf("[MPI process %d] I am the broadcast root, and send value %d.\n", my_proc_id, buffer);
     }
     MPI_Bcast(&buffer, 1, MPI_INT, broadcast_root, MPI_COMM_WORLD);
-    if(my_rank != broadcast_root){
-        printf("[MPI process %d] I am a broadcast receiver, and obtained value %d.\n", my_rank, buffer);
+    if(my_proc_id != broadcast_root){
+        printf("[MPI process %d] I am a broadcast receiver, and obtained value %d.\n", my_proc_id, buffer);
     }
  
     MPI_Finalize();
