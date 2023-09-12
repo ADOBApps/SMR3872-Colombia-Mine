@@ -33,12 +33,14 @@ typedef struct _mdsys mdsys_t;
 
 /* helper function: read a line and then return
    the first string with whitespace stripped off */
-static int get_a_line(FILE *fp, char *buf){
+static int get_a_line(FILE *fp, char *buf)
+{
     char tmp[BLEN], *ptr;
 
     /* read a line and cut of comments and blanks */
     if (fgets(tmp,BLEN,fp)) {
         int i;
+
         ptr=strchr(tmp,'#');
         if (ptr) *ptr= '\0';
         i=strlen(tmp); --i;
@@ -60,14 +62,16 @@ static int get_a_line(FILE *fp, char *buf){
 
 /* helper function: get current time in seconds since epoch */
 
-static double wallclock(){
+static double wallclock()
+{
         struct timeval t;
         gettimeofday(&t,0);
         return ((double) t.tv_sec) + 1.0e-6*((double) t.tv_usec);
 }
 
 /* helper function: zero out an array */
-static void azzero(double *d, const int n){
+static void azzero(double *d, const int n)
+{
     int i;
     for (i=0; i<n; ++i) {
         d[i]=0.0;
@@ -75,7 +79,8 @@ static void azzero(double *d, const int n){
 }
 
 /* helper function: apply minimum image convention */
-static double pbc(double x, const double boxby2){
+static double pbc(double x, const double boxby2)
+{
     while (x >  boxby2) x -= 2.0*boxby2;
     while (x < -boxby2) x += 2.0*boxby2;
     return x;
@@ -97,6 +102,7 @@ static void ekin(mdsys_t *sys)
 static void force(mdsys_t *sys){
     double r,ffac;
     double rx,ry,rz;
+    double c12, c6, rsq, rcsq;
     int i,j;
 
     /* zero energy and forces */
@@ -104,37 +110,40 @@ static void force(mdsys_t *sys){
     azzero(sys->fx,sys->natoms);
     azzero(sys->fy,sys->natoms);
     azzero(sys->fz,sys->natoms);
-
-    for(i=0; i < (sys->natoms); ++i) {
-        for(j=0; j < (sys->natoms); ++j) {
-
-            /* particles have no interactions with themselves */
-            if (i==j) continue;
-
+    c12 = 4.0 * sys->epsilon*pow(sys->sigma, 12.0);
+    c6 = 4.0 * sys->epsilon*pow(sys->sigma, 6.0);
+    for(i=0; i < (sys->natoms) -1; ++i) {
+        for(j=i+1; j < (sys->natoms); ++j) {
+            if(i==j){
+                continue;
+            }
             /* get distance between particle i and j */
             rx=pbc(sys->rx[i] - sys->rx[j], 0.5*sys->box);
             ry=pbc(sys->ry[i] - sys->ry[j], 0.5*sys->box);
             rz=pbc(sys->rz[i] - sys->rz[j], 0.5*sys->box);
-            r = sqrt(rx*rx + ry*ry + rz*rz);
+            rsq = (rx*rx + ry*ry + rz*rz);
 
             /* compute force and energy if within cutoff */
-            if (r < sys->rcut) {
-                ffac = -4.0*sys->epsilon*(-12.0*pow(sys->sigma/r, 12.0)/r
-                                         +6*pow(sys->sigma/r, 6.0)/r);
-
-                sys->epot += 0.5*4.0*sys->epsilon*(pow(sys->sigma/r, 12.0)
-                                               -pow(sys->sigma/r, 6.0));
-
+            if (rsq < rcsq) {
+                double r6, rinv;
+                rinv = 1.0/rsq;
+                r6 = rinv*rinv*rinv;
+                ffac = (12.0*c12*r6 - 6.0*c6)*r6*rinv;
+                sys->epot += r6*(c12*r6 -c6);
                 sys->fx[i] += rx/r*ffac;
                 sys->fy[i] += ry/r*ffac;
                 sys->fz[i] += rz/r*ffac;
+                sys->fx[j] -= rx/r*ffac;
+                sys->fy[j] -= ry/r*ffac;
+                sys->fz[j] -= rz/r*ffac;
             }
         }
     }
 }
 
 /* velocity verlet */
-static void velverlet(mdsys_t *sys){
+static void velverlet(mdsys_t *sys)
+{
     int i;
 
     /* first part: propagate velocities by half and positions by full step */
@@ -159,7 +168,8 @@ static void velverlet(mdsys_t *sys){
 }
 
 /* append data to output. */
-static void output(mdsys_t *sys, FILE *erg, FILE *traj){
+static void output(mdsys_t *sys, FILE *erg, FILE *traj)
+{
     int i;
 
     printf("% 8d % 20.8f % 20.8f % 20.8f % 20.8f\n", sys->nfi, sys->temp, sys->ekin, sys->epot, sys->ekin+sys->epot);
@@ -172,7 +182,8 @@ static void output(mdsys_t *sys, FILE *erg, FILE *traj){
 
 
 /* main */
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
     int nprint, i;
     char restfile[BLEN], trajfile[BLEN], ergfile[BLEN], line[BLEN];
     FILE *fp,*traj,*erg;
