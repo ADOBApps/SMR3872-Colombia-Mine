@@ -3,8 +3,7 @@
 #include <stdio.h>
 #include <mpi.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
   /* Variables:
    ! me   : rank of current process
    ! prev : rank of process that we are receiving data from
@@ -44,9 +43,9 @@ int main(int argc, char **argv)
 
   /* at the beginning rank 0 holds the message all others have nothing */
   if (me == 0) {
-      mesg = 1;
+    mesg = 1;
   } else {
-      mesg = 0;
+    mesg = 0;
   }
 
   /* run loop to communicate the message buffer from one rank to the next.
@@ -56,11 +55,11 @@ int main(int argc, char **argv)
   for (i=0; i < 20; ++i) {
     /* odd is sending first and receiving later */
     if (odd) {
-      MPI_Send(&mesg,1,MPI_INT,next,0,MPI_COMM_WORLD);
-      MPI_Recv(&tmp,1,MPI_INT,prev,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+      MPI_Send(&mesg, 1, MPI_INT, next, 0, MPI_COMM_WORLD);
+      MPI_Recv(&tmp, 1, MPI_INT, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     } else {
-      MPI_Recv(&tmp,1,MPI_INT,prev,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-      MPI_Send(&mesg,1,MPI_INT,next,0,MPI_COMM_WORLD);
+      MPI_Recv(&tmp, 1, MPI_INT, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Send(&mesg, 1, MPI_INT, next, 0, MPI_COMM_WORLD);
     }
     /* communication complete for this step. copy incoming buffer to message */
     mesg = tmp;

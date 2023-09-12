@@ -1,0 +1,13 @@
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /leonardo/home/userexternal/aorozco0/SMR3872-Colombia-Mine/MyFiles/Broadcast/build
+Consolidate compiler generated dependencies of target mpi_bcast
+[100%] Built target mpi_bcast
+Running with 1 processes...
+[MPI process 0] I am the broadcast root, and send value 12345.
+Running with 1 processes...
+[MPI process 0] I am the broadcast root, and send value 12345.
+Running with 1 processes...
+[MPI process 0] I am the broadcast root, and send value 12345.
+Running with 1 processes...
+[MPI process 0] I am the broadcast root, and send value 12345.

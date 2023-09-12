@@ -139,8 +139,7 @@ static void force(mdsys_t *sys){
 }
 
 /* velocity verlet */
-static void velverlet(mdsys_t *sys)
-{
+static void velverlet(mdsys_t *sys){
     int i;
 
     /* first part: propagate velocities by half and positions by full step */
@@ -165,8 +164,7 @@ static void velverlet(mdsys_t *sys)
 }
 
 /* append data to output. */
-static void output(mdsys_t *sys, FILE *erg, FILE *traj)
-{
+static void output(mdsys_t *sys, FILE *erg, FILE *traj){
     int i;
 
     printf("% 8d % 20.8f % 20.8f % 20.8f % 20.8f\n", sys->nfi, sys->temp, sys->ekin, sys->epot, sys->ekin+sys->epot);
@@ -179,8 +177,7 @@ static void output(mdsys_t *sys, FILE *erg, FILE *traj)
 
 
 /* main */
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
     int nprint, i;
     char restfile[BLEN], trajfile[BLEN], ergfile[BLEN], line[BLEN];
     FILE *fp,*traj,*erg;
