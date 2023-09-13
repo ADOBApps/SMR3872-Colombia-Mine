@@ -118,7 +118,7 @@ static void force(mdsys_t *sys){
             rx = pbc(sys->rx[i] - sys->rx[j], 0.5*sys->box);
             ry = pbc(sys->ry[i] - sys->ry[j], 0.5*sys->box);
             rz = pbc(sys->rz[i] - sys->rz[j], 0.5*sys->box);
-            // r = sqrt(rx*rx + ry*ry + rz*rz);
+            r = sqrt(rx*rx + ry*ry + rz*rz);
             rsq = rx*rx + ry*ry + rz*rz; // new
             /* compute force and energy if within cutoff */
             /* if (r < sys->rcut) {
@@ -129,10 +129,11 @@ static void force(mdsys_t *sys){
                                                -pow(sys->sigma/r, 6.0));
              */
             if(rsq < rcsq){ // new
-                double r6, r_inv;
-                r_inv = 1.0/rsq;
-                r6 = r_inv * r_inv * r_inv;
-                ffac = ((12.0 * c12 * r6) - (6.0 * c6)) * r6 * r_inv;
+                double r6, r_inv; // new
+                r_inv = 1.0/rsq; // new
+                r6 = r_inv * r_inv * r_inv; // new
+                ffac = ((2.0 * c12 * r6) - c6) * 6.0 * r6 * r_inv * r; // new
+                sys->epot += (r6 * ((c12 * r6) - c6)); // new
                 sys->fx[i] += rx/r*ffac;
                 sys->fy[i] += ry/r*ffac;
                 sys->fz[i] += rz/r*ffac;
