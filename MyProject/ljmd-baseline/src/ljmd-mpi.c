@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
+#include <mpi.h>
 
 /* generic file- or pathname buffer length */
 #define BLEN 200
@@ -22,12 +23,16 @@ const double mvsq2e=2390.05736153349; /* m*v^2 in kcal/mol */
 /* structure to hold the complete information
  * about the MD system */
 struct _mdsys {
-    int natoms,nfi,nsteps;
+    int natoms, nfi, nsteps;
     double dt, mass, epsilon, sigma, box, rcut;
     double ekin, epot, temp;
     double *rx, *ry, *rz;
     double *vx, *vy, *vz;
     double *fx, *fy, *fz;
+    double *cx, *cy, *cz; // new
+    MPI_Comm mpicomm; // new
+    int nsize; // new (num_proceses)
+    int rank;
 };
 typedef struct _mdsys mdsys_t;
 
@@ -100,10 +105,40 @@ static void force(mdsys_t *sys){
     int c12, c6;
 
     /* zero energy and forces */
-    sys->epot=0.0;
+    // sys->epot=0.0;
+    double epot = 0.0;// new
+    /* 
+    * Old
     azzero(sys->fx, sys->natoms);
     azzero(sys->fy, sys->natoms);
-    azzero(sys->fz, sys->natoms);
+    azzero(sys->fz, sys->natoms); */
+    azzero(sys->cx, sys->natoms);
+    azzero(sys->cy, sys->natoms);
+    azzero(sys->cz, sys->natoms);
+
+    // Initialises the MPI environment
+    MPI_Init(NULL, NULL);
+
+    // Get current process id
+    MPI_Comm_rank(MPI_COMM_WORLD, &sys->rank);
+
+    // Get total proc
+    int numproc;
+    MPI_Comm_size(MPI_COMM_WORLD, &sys->nsize);
+
+
+    /**
+     * int MPI_Bcast(void* buffer,
+              int count,
+              MPI_Datatype datatype,
+              int emitter_rank,
+              MPI_Comm communicator);
+    */
+
+    MPI_Bcast(sys->cx, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
+    MPI_Bcast(sys->cy, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
+    MPI_Bcast(sys->cz, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
+
     c12 = 4.0 * sys->epsilon * pow(sys->sigma, 12.0); // new
     c6 = 4.0 * sys->epsilon * pow(sys->sigma, 6.0); // new
     rcsq = sys->rcut * sys->rcut; // new
@@ -136,6 +171,8 @@ static void force(mdsys_t *sys){
             }
         }
     }
+    // finish cycle
+    MPI_Finalize();
 }
 
 /* velocity verlet */
