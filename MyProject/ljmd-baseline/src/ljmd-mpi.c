@@ -107,8 +107,8 @@ static void force(mdsys_t *sys){
     double epot = 0.0;
     int me, ncpu;
     MPI_INIT(NULL, NULL);
-    MPI_Comm_size(MPI_COMM_WORLD,&nsize);
-    MPI_Comm_rank(MPI_COMM_WORLD,&mpirank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nsize);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpirank);
     /* zero energy and forces */
     azzero(sys->cx,sys->natoms);
     azzero(sys->cy,sys->natoms);
