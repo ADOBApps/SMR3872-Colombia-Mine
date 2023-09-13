@@ -171,9 +171,9 @@ static void force(mdsys_t *sys){
                 sys->fx[j] -= rx/r*ffac; // new
                 sys->fy[j] -= ry/r*ffac; // new
                 sys->fz[j] -= rz/r*ffac; // new
+                sys->cy[i] -= ry * ffac;
+                sys->cz[i] -= rz * ffac;
             }
-            sys->cy[i] -= ry * ffac;
-            sys->cz[i] -= rz * ffac;
         }
     }
     /*
