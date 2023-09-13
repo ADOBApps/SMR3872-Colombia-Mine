@@ -31,8 +31,8 @@ struct _mdsys {
     double *fx, *fy, *fz;
     double *cx, *cy, *cz; // new
     MPI_Comm mpicomm; // new
-    int nsize; // new (num_proceses)
-    int rank;
+    int mpisize; // new (num_proceses)
+    int mpirank;
 };
 typedef struct _mdsys mdsys_t;
 
@@ -101,7 +101,7 @@ static void force(mdsys_t *sys){
     double r,ffac;
     double rx, ry, rz;
     double rcsq, rsq;
-    int i,j;
+    int i, ii, j;
     int c12, c6;
 
     /* zero energy and forces */
@@ -120,11 +120,10 @@ static void force(mdsys_t *sys){
     MPI_Init(NULL, NULL);
 
     // Get current process id
-    MPI_Comm_rank(MPI_COMM_WORLD, &sys->rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &sys->mpirank);
 
     // Get total proc
-    int numproc;
-    MPI_Comm_size(MPI_COMM_WORLD, &sys->nsize);
+    MPI_Comm_size(MPI_COMM_WORLD, &sys->mpisize);
 
 
     /**
@@ -142,7 +141,11 @@ static void force(mdsys_t *sys){
     c12 = 4.0 * sys->epsilon * pow(sys->sigma, 12.0); // new
     c6 = 4.0 * sys->epsilon * pow(sys->sigma, 6.0); // new
     rcsq = sys->rcut * sys->rcut; // new
-    for(i = 0; i < (sys->natoms) - 1; ++i) {
+    for(i = 0; i < (sys->natoms) - 1; i = sys->mpisize) {
+        ii = i + sys->mpirank;
+        if(ii >= (sys->natoms - 1)){
+            break;
+        }
         for(j = (i +1); j < (sys->natoms); ++j) {
             /* particles have no interactions with themselves */
             /* if (i == j){
@@ -169,8 +172,23 @@ static void force(mdsys_t *sys){
                 sys->fy[j] -= ry/r*ffac; // new
                 sys->fz[j] -= rz/r*ffac; // new
             }
+            sys->cy[i] -= ry * ffac;
+            sys->cz[i] -= rz * ffac;
         }
     }
+    /*
+    * MPI_Reduce(const void* send_buffer,
+               void* receive_buffer,
+               int count,
+               MPI_Datatype datatype,
+               MPI_Op operation,
+               int root,
+               MPI_Comm communicator);
+    */
+    MPI_Reduce(sys->cx, sys->fx, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
+    MPI_Reduce(sys->cy, sys->fy, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
+    MPI_Reduce(sys->cz, sys->fz, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
+    MPI_Reduce(&epot, &sys->epot, 1, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
     // finish cycle
     MPI_Finalize();
 }
