@@ -12,6 +12,10 @@
 #include <math.h>
 #include <sys/time.h>
 
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
 /* generic file- or pathname buffer length */
 #define BLEN 200
 
@@ -95,7 +99,7 @@ static void ekin(mdsys_t *sys){
 static void force(mdsys_t *sys){
     double r,ffac;
     double rx, ry, rz;
-    double rcsq, rsq;
+    double rcsq, rsq, epot;
     int i,j;
     int c12, c6;
 
@@ -107,12 +111,12 @@ static void force(mdsys_t *sys){
     c12 = 4.0 * sys->epsilon * pow(sys->sigma, 12.0); // new
     c6 = 4.0 * sys->epsilon * pow(sys->sigma, 6.0); // new
     rcsq = sys->rcut * sys->rcut; // new
+    #if defined(_OPENMP)
+    #pragma omp parallel for default (shared) \
+        private(i) reduction(+:epot)
+    #endif
     for(i = 0; i < (sys->natoms) - 1; ++i) {
-        for(j = (i +1); j < (sys->natoms); ++j) {
-            /* particles have no interactions with themselves */
-            /* if (i == j){
-                continue;
-            } */
+        for(j = (i + 1); j < (sys->natoms); ++j) {
 
             /* get distance between particle i and j */
             rx = pbc(sys->rx[i] - sys->rx[j], 0.5*sys->box);
@@ -120,20 +124,13 @@ static void force(mdsys_t *sys){
             rz = pbc(sys->rz[i] - sys->rz[j], 0.5*sys->box);
             r = sqrt(rx*rx + ry*ry + rz*rz);
             rsq = rx*rx + ry*ry + rz*rz; // new
-            /* compute force and energy if within cutoff */
-            /* if (r < sys->rcut) {
-                ffac = -4.0*sys->epsilon*(-12.0*pow(sys->sigma/r, 12.0)/r
-                                         +6*pow(sys->sigma/r, 6.0)/r);
-
-                sys->epot += 0.5*4.0*sys->epsilon*(pow(sys->sigma/r, 12.0)
-                                               -pow(sys->sigma/r, 6.0));
-             */
             if(rsq < rcsq){ // new
                 double r6, r_inv; // new
                 r_inv = 1.0/rsq; // new
                 r6 = r_inv * r_inv * r_inv; // new
                 ffac = ((2.0 * c12 * r6) - c6) * 6.0 * r6 * r_inv * r; // new
-                sys->epot += (r6 * ((c12 * r6) - c6)); // new
+                epot += (r6 * ((c12 * r6) - c6)); // new
+                sys->epot = epot;
                 sys->fx[i] += rx/r*ffac;
                 sys->fy[i] += ry/r*ffac;
                 sys->fz[i] += rz/r*ffac;

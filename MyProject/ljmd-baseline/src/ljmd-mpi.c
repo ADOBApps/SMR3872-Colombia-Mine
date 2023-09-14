@@ -31,6 +31,7 @@ struct _mdsys {
     double *fx, *fy, *fz;
     double *cx, *cy, *cz; // new
     MPI_Comm mpicomm; // new
+    MPI_Request request;// new
     int mpisize; // new (num_proceses)
     int mpirank;
 };
@@ -81,8 +82,8 @@ static void azzero(double *d, const int n){
 
 /* helper function: apply minimum image convention */
 static double pbc(double x, const double boxby2){
-    while (x >  boxby2) x -= 2.0*boxby2;
-    while (x < -boxby2) x += 2.0*boxby2;
+    while (x >  boxby2) x -= 2.0 * boxby2;
+    while (x < -boxby2) x += 2.0 * boxby2;
     return x;
 }
 
@@ -90,7 +91,7 @@ static double pbc(double x, const double boxby2){
 static void ekin(mdsys_t *sys){
     int i;
     sys->ekin = 0.0;
-    for (i=0; i<sys->natoms; ++i) {
+    for (i = 0; i < sys->natoms; ++i) {
         sys->ekin += 0.5*mvsq2e*sys->mass*(sys->vx[i]*sys->vx[i] + sys->vy[i]*sys->vy[i] + sys->vz[i]*sys->vz[i]);
     }
     sys->temp = 2.0*sys->ekin/(3.0*sys->natoms-3.0)/kboltz;
@@ -105,26 +106,13 @@ static void force(mdsys_t *sys){
     int c12, c6;
 
     /* zero energy and forces */
-    // sys->epot=0.0;
+    sys->epot = 0.0;
     double epot = 0.0;// new
     /* 
-    * Old
+    * Old*/
     azzero(sys->fx, sys->natoms);
     azzero(sys->fy, sys->natoms);
-    azzero(sys->fz, sys->natoms); */
-    azzero(sys->cx, sys->natoms);
-    azzero(sys->cy, sys->natoms);
-    azzero(sys->cz, sys->natoms);
-
-    // Initialises the MPI environment
-    MPI_Init(NULL, NULL);
-
-    // Get current process id
-    MPI_Comm_rank(MPI_COMM_WORLD, &sys->mpirank);
-
-    // Get total proc
-    MPI_Comm_size(MPI_COMM_WORLD, &sys->mpisize);
-
+    azzero(sys->fz, sys->natoms);
 
     /**
      * int MPI_Bcast(void* buffer,
@@ -134,23 +122,24 @@ static void force(mdsys_t *sys){
               MPI_Comm communicator);
     */
 
-    MPI_Bcast(sys->cx, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
-    MPI_Bcast(sys->cy, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
-    MPI_Bcast(sys->cz, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
+    MPI_Ibcast(sys->cx, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm, &sys->request); // new
+    //MPI_Bcast(sys->ry, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
+    //MPI_Bcast(sys->rz, sys->natoms, MPI_DOUBLE, 0, sys->mpicomm); // new
 
     c12 = 4.0 * sys->epsilon * pow(sys->sigma, 12.0); // new
     c6 = 4.0 * sys->epsilon * pow(sys->sigma, 6.0); // new
     rcsq = sys->rcut * sys->rcut; // new
-    for(i = 0; i < (sys->natoms) - 1; i = sys->mpisize) {
+    // printf("# atoms %d", sys->natoms);
+    /* for(i = 0; i < (sys->natoms) - 1; i += (sys->mpisize - 1)) {
         ii = i + sys->mpirank;
         if(ii >= (sys->natoms - 1)){
             break;
+            MPI_Finalize();
         }
         for(j = (i +1); j < (sys->natoms); ++j) {
-            /* particles have no interactions with themselves */
-            /* if (i == j){
-                continue;
-            } */
+ */
+    for(i = 0; i < (sys->natoms) - 1; ++i) {
+        for(j = (i + 1); j < (sys->natoms); ++j) {
 
             /* get distance between particle i and j */
             rx = pbc(sys->rx[i] - sys->rx[j], 0.5*sys->box);
@@ -164,18 +153,22 @@ static void force(mdsys_t *sys){
                 r_inv = 1.0/rsq; // new
                 r6 = r_inv * r_inv * r_inv; // new
                 ffac = ((2.0 * c12 * r6) - c6) * 6.0 * r6 * r_inv * r; // new
-                sys->epot += (r6 * ((c12 * r6) - c6)); // new
+                sys->epot += (r6 * ((c12 * r6) - c6)); // old
                 sys->fx[i] += rx/r*ffac;
                 sys->fy[i] += ry/r*ffac;
                 sys->fz[i] += rz/r*ffac;
-                sys->fx[j] -= rx/r*ffac; // new
-                sys->fy[j] -= ry/r*ffac; // new
-                sys->fz[j] -= rz/r*ffac; // new
-                sys->cy[i] -= ry * ffac;
-                sys->cz[i] -= rz * ffac;
+
+                sys->fx[j] -= rx/r*ffac;
+                sys->fy[j] -= ry/r*ffac;
+                sys->fz[j] -= rz/r*ffac;
+
+                //sys->cx[i] += rx/r * ffac; // new
+                sys->cy[i] += ry * ffac; // new
+                sys->cz[i] += rz * ffac; // new
             }
         }
     }
+    MPI_Wait(&sys->request, MPI_STATUS_IGNORE);
     /*
     * MPI_Reduce(const void* send_buffer,
                void* receive_buffer,
@@ -185,12 +178,15 @@ static void force(mdsys_t *sys){
                int root,
                MPI_Comm communicator);
     */
-    MPI_Reduce(sys->cx, sys->fx, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
-    MPI_Reduce(sys->cy, sys->fy, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
-    MPI_Reduce(sys->cz, sys->fz, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
-    MPI_Reduce(&epot, &sys->epot, 1, MPI_DOUBLE, MPI_SUM, 0, sys->mpicomm);
-    // finish cycle
-    MPI_Finalize();
+    //printf("test 0\n");
+    //MPI_Reduce(sys->cx, sys->fx, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    //printf("test 1\n");
+    //MPI_Reduce(sys->cy, sys->fy, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    //printf("test 2");
+    //MPI_Reduce(sys->cz, sys->fz, sys->natoms, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    //printf("test 3");
+    //MPI_Reduce(&epot, &sys->epot, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    //printf("test 4");
 }
 
 /* velocity verlet */
@@ -239,36 +235,51 @@ int main(int argc, char **argv){
     mdsys_t sys;
     double t_start;
 
+    // Initialises the MPI environment
+    MPI_Init(&argc, &argv);
+    sys.mpicomm =  MPI_COMM_WORLD;
+    MPI_Comm_rank(MPI_COMM_WORLD, &sys.mpirank);
+    MPI_Comm_size(MPI_COMM_WORLD, &sys.mpisize);
+
+    //MPI_Bcast(sys.cx, sys.natoms, MPI_DOUBLE, 0, MPI_COMM_WORLD); // new
+
+    if(sys.mpirank != 0){
+        printf("[MPI process %d] I am a broadcast receiver, and obtained value %f.\n", sys.mpirank, *(double*)sys.cx);
+    } else{
+        printf("[MPI process %d] I am a broadcast sender, and put value %f.\n", sys.mpirank, *(double*)sys.cx);
+    }
+
     printf("LJMD version %3.1f\n", LJMD_VERSION);
 
     t_start = wallclock();
 
     /* read input file */
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     // Convert string integer representation in integer
     sys.natoms=atoi(line);
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     /* converts a string representation of a floating-point
     * number to its corresponding double value
     */
     sys.mass=atof(line);
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     sys.epsilon=atof(line);
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     sys.sigma=atof(line);
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     sys.rcut=atof(line);
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     sys.box=atof(line);
-    if(get_a_line(stdin,restfile)) return 1;
-    if(get_a_line(stdin,trajfile)) return 1;
-    if(get_a_line(stdin,ergfile)) return 1;
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, restfile)) return 1;
+    if(get_a_line(stdin, trajfile)) return 1;
+    if(get_a_line(stdin, ergfile)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     sys.nsteps=atoi(line);
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     sys.dt=atof(line);
-    if(get_a_line(stdin,line)) return 1;
+    if(get_a_line(stdin, line)) return 1;
     nprint=atoi(line);
+    
 
     /* allocate memory */
     sys.rx=(double *)malloc(sys.natoms*sizeof(double));
@@ -280,6 +291,11 @@ int main(int argc, char **argv){
     sys.fx=(double *)malloc(sys.natoms*sizeof(double));
     sys.fy=(double *)malloc(sys.natoms*sizeof(double));
     sys.fz=(double *)malloc(sys.natoms*sizeof(double));
+
+    // new
+    sys.cx=(double *)malloc(sys.natoms*sizeof(double));
+    sys.cy=(double *)malloc(sys.natoms*sizeof(double));
+    sys.cz=(double *)malloc(sys.natoms*sizeof(double));
 
     /* read restart */
     fp=fopen(restfile,"r");
@@ -342,6 +358,12 @@ int main(int argc, char **argv){
     free(sys.fx);
     free(sys.fy);
     free(sys.fz);
+    // new
+    free(sys.cx);
+    free(sys.cy);
+    free(sys.cz);
 
-    return 0;
+    // MPI cycle killed
+    MPI_Finalize();
+    return EXIT_SUCCESS;
 }
